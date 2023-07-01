@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Express is Running...!");
+  res.send("Summer Camp is Running...!⚡");
 });
 
 app.listen(port, () => {
