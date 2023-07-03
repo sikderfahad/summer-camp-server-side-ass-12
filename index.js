@@ -7,7 +7,6 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-console.log(process.env.DB_USER);
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3zuhxgd.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -27,6 +26,15 @@ async function run() {
 
     const database = client.db("summerCamp");
     const allClassesCollection = database.collection("all-classes");
+
+    // READ: get all popular classes display on homepage
+    app.get("/popular-classes", async (req, res) => {
+      const result = await allClassesCollection
+        .find()
+        .sort({ enrolledStudents: -1 })
+        .toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
