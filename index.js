@@ -26,10 +26,20 @@ async function run() {
 
     const database = client.db("summerCamp");
     const allClassesCollection = database.collection("all-classes");
+    const allTeachersCollection = database.collection("all-teachers");
 
     // READ: get all popular classes display on homepage
     app.get("/popular-classes", async (req, res) => {
       const result = await allClassesCollection
+        .find()
+        .sort({ enrolledStudents: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    // READ: get all popular classes display on homepage
+    app.get("/popular-teachers", async (req, res) => {
+      const result = await allTeachersCollection
         .find()
         .sort({ enrolledStudents: -1 })
         .toArray();
