@@ -1,7 +1,7 @@
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -27,6 +27,7 @@ async function run() {
     const database = client.db("summerCamp");
     const allClassesCollection = database.collection("all-classes");
     const allTeachersCollection = database.collection("all-teachers");
+    const usersCollection = database.collection("all-users");
 
     // READ: get all popular classes display on homepage
     app.get("/popular-classes", async (req, res) => {
@@ -44,6 +45,20 @@ async function run() {
         .sort({ enrolledStudents: -1 })
         .toArray();
       res.send(result);
+    });
+
+    // CREATE: post a user in db
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      // console.log(user);
+      const query = { email: user.email };
+      const isExist = await usersCollection.findOne(query);
+      // console.log(isExist);
+      if (!isExist) {
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      }
+      // console.log(query, user, isExist);
     });
 
     // Send a ping to confirm a successful connection
