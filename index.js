@@ -72,14 +72,13 @@ async function run() {
       const id = req.params.id;
       const role = req.body;
       const query = { _id: new ObjectId(id) };
-      console.log(id, role, query);
-      // const updateDoc = {
-      //   $set: {
-      //     role: role,
-      //   },
-      // };
-      // const result = await usersCollection.updateOne(query, updateDoc);
-      // res.send(result);
+      const updateDoc = {
+        $set: {
+          role: role.role,
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
