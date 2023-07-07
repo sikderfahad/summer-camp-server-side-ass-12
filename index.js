@@ -67,6 +67,21 @@ async function run() {
       res.send(result);
     });
 
+    // UPDATE: modify user role
+    app.patch("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const role = req.body;
+      const query = { _id: new ObjectId(id) };
+      console.log(id, role, query);
+      // const updateDoc = {
+      //   $set: {
+      //     role: role,
+      //   },
+      // };
+      // const result = await usersCollection.updateOne(query, updateDoc);
+      // res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
