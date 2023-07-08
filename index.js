@@ -50,20 +50,26 @@ async function run() {
     // CREATE: post a user in db
     app.post("/users", async (req, res) => {
       const user = req.body;
-      // console.log(user);
       const query = { email: user.email };
       const isExist = await usersCollection.findOne(query);
-      // console.log(isExist);
+
       if (!isExist) {
         const result = await usersCollection.insertOne(user);
         res.send(result);
       }
-      // console.log(query, user, isExist);
     });
 
     // READ: get all user from db
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    // READ: get a single user from db
+    app.get("/current-user", async (req, res) => {
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
       res.send(result);
     });
 
