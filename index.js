@@ -28,6 +28,7 @@ async function run() {
     const allClassesCollection = database.collection("all-classes");
     const allTeachersCollection = database.collection("all-teachers");
     const usersCollection = database.collection("all-users");
+    const addClassCollection = database.collection("add-classes");
 
     // READ: get all popular classes display on homepage
     app.get("/popular-classes", async (req, res) => {
@@ -35,6 +36,38 @@ async function run() {
         .find()
         .sort({ enrolledStudents: -1 })
         .toArray();
+      res.send(result);
+    });
+
+    // READ: get all instructors display on instructors page
+    app.get("/instructors", async (req, res) => {
+      const result = await usersCollection
+        .find({ role: "instructor" })
+        .toArray();
+      res.send(result);
+    });
+
+    // CREATE: add a class by instructor
+    app.post("/add-classes", async (req, res) => {
+      const newClass = req.body;
+      console.log(newClass);
+      const result = await addClassCollection.insertOne(newClass);
+      res.send(result);
+      console.log(result);
+    });
+
+    // READ: get all classes created by a spesific istructor
+    app.get("/add-classes", async (req, res) => {
+      const email = req.query.email;
+      const query = { instructorEmail: email };
+      const result = await addClassCollection.find(query).toArray();
+      console.log(result);
+      res.send(result);
+    });
+
+    // READ: get all classes created by all istructors
+    app.get("/all-added-classes", async (req, res) => {
+      const result = await addClassCollection.find().toArray();
       res.send(result);
     });
 
