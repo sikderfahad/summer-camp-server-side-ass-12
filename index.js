@@ -71,6 +71,21 @@ async function run() {
       res.send(result);
     });
 
+    // UPDATE: modify class status
+    app.patch("/all-added-classes/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+      const query = { _id: new ObjectId(id) };
+      console.log(status, query);
+      const updateDoc = {
+        $set: {
+          status: status.status,
+        },
+      };
+      const result = await addClassCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+
     // READ: get all popular classes display on homepage
     app.get("/popular-teachers", async (req, res) => {
       const result = await allTeachersCollection
