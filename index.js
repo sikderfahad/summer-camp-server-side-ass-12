@@ -74,17 +74,45 @@ async function run() {
     // UPDATE: modify class status
     app.patch("/all-added-classes/:id", async (req, res) => {
       const id = req.params.id;
-      const status = req.body;
-      const query = { _id: new ObjectId(id) };
-      console.log(status, query);
-      const updateDoc = {
-        $set: {
-          status: status.status,
-        },
-      };
-      const result = await addClassCollection.updateOne(query, updateDoc);
-      res.send(result);
+      const modify = req.body;
+
+      if (modify.status) {
+        const query = { _id: new ObjectId(id) };
+        // console.log(status, query);
+        const updateDoc = {
+          $set: {
+            status: modify.status,
+          },
+        };
+        const result = await addClassCollection.updateOne(query, updateDoc);
+        res.send(result);
+      }
+      // Send Feedback
+      if (modify.feedback) {
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            feedback: modify.feedback,
+          },
+        };
+        const result = await addClassCollection.updateOne(query, updateDoc);
+        console.log("modify ", modify, id, result);
+        res.send(result);
+      }
     });
+    // app.patch("/all-added-classes/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const status = req.body;
+    //   const query = { _id: new ObjectId(id) };
+    //   // console.log(status, query);
+    //   const updateDoc = {
+    //     $set: {
+    //       status: status.status,
+    //     },
+    //   };
+    //   const result = await addClassCollection.updateOne(query, updateDoc);
+    //   res.send(result);
+    // });
 
     // READ: get all popular classes display on homepage
     app.get("/popular-teachers", async (req, res) => {
