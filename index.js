@@ -50,10 +50,8 @@ async function run() {
     // CREATE: add a class by instructor
     app.post("/add-classes", async (req, res) => {
       const newClass = req.body;
-      console.log(newClass);
       const result = await addClassCollection.insertOne(newClass);
       res.send(result);
-      console.log(result);
     });
 
     // READ: get all classes created by a spesific istructor
@@ -61,7 +59,6 @@ async function run() {
       const email = req.query.email;
       const query = { instructorEmail: email };
       const result = await addClassCollection.find(query).toArray();
-      console.log(result);
       res.send(result);
     });
 
@@ -71,7 +68,7 @@ async function run() {
       res.send(result);
     });
 
-    // UPDATE: modify class status
+    // UPDATE: modify class status & send admin feedback
     app.patch("/all-added-classes/:id", async (req, res) => {
       const id = req.params.id;
       const modify = req.body;
@@ -96,23 +93,29 @@ async function run() {
           },
         };
         const result = await addClassCollection.updateOne(query, updateDoc);
-        console.log("modify ", modify, id, result);
+        // console.log("modify ", modify, id, result);
         res.send(result);
       }
     });
-    // app.patch("/all-added-classes/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const status = req.body;
-    //   const query = { _id: new ObjectId(id) };
-    //   // console.log(status, query);
-    //   const updateDoc = {
-    //     $set: {
-    //       status: status.status,
-    //     },
-    //   };
-    //   const result = await addClassCollection.updateOne(query, updateDoc);
-    //   res.send(result);
-    // });
+
+    // UPDATE: modify a instructor class
+    app.patch("/update-class/:id", async (req, res) => {
+      const id = req.params.id;
+      const newClassInfo = req.body;
+      const { image, name, price, availableSeats } = newClassInfo;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          image: image,
+          name: name,
+          price: price,
+          availableSeats: availableSeats,
+        },
+      };
+      const result = await addClassCollection.updateOne(query, updateDoc);
+      // console.log(result);
+      res.send(result);
+    });
 
     // READ: get all popular classes display on homepage
     app.get("/popular-teachers", async (req, res) => {
