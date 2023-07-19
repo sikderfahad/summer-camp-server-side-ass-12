@@ -29,6 +29,7 @@ async function run() {
     const allTeachersCollection = database.collection("all-teachers");
     const usersCollection = database.collection("all-users");
     const addClassCollection = database.collection("add-classes");
+    const userSelectedCollection = database.collection("booking-classes");
 
     // READ: get all popular classes display on homepage
     app.get("/popular-classes", async (req, res) => {
@@ -46,6 +47,33 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
+    // Student Operation Start
+
+    // CREATE: a student book a class
+    app.post("/booking-class", async (req, res) => {
+      const classInfo = req.body;
+      const result = await userSelectedCollection.insertOne(classInfo);
+      res.send(result);
+
+      console.log(result);
+    });
+
+    app.get("/booking-class", async (req, res) => {
+      const email = req.query.email;
+      const query = { studentEmail: email };
+      const result = await userSelectedCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.delete("/booking-class/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userSelectedCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Student Operation End
 
     // CREATE: add a class by instructor
     app.post("/add-classes", async (req, res) => {
