@@ -1,6 +1,8 @@
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
+const stripe = require("stripe")(process.env.PAYMENT_SECRATE_KEY);
+
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 3000;
@@ -30,6 +32,11 @@ async function run() {
     const usersCollection = database.collection("all-users");
     const addClassCollection = database.collection("add-classes");
     const userSelectedCollection = database.collection("booking-classes");
+    const paymentCollection = database.collection("payments");
+
+    /*------------------------------------
+                Only view page
+    ------------------------------------*/
 
     // READ: get all popular classes display on homepage
     app.get("/popular-classes", async (req, res) => {
@@ -48,7 +55,18 @@ async function run() {
       res.send(result);
     });
 
-    // Student Operation Start
+    // READ: get all popular teachers display on homepage
+    app.get("/popular-teachers", async (req, res) => {
+      const result = await allTeachersCollection
+        .find()
+        .sort({ enrolledStudents: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    /*------------------------------------
+          Student Operation Start
+    ------------------------------------*/
 
     // CREATE: a student book a class
     app.post("/booking-class", async (req, res) => {
@@ -56,9 +74,10 @@ async function run() {
       const result = await userSelectedCollection.insertOne(classInfo);
       res.send(result);
 
-      console.log(result);
+      // console.log(result);
     });
 
+    // READ: get all booking class when a student select this
     app.get("/booking-class", async (req, res) => {
       const email = req.query.email;
       const query = { studentEmail: email };
@@ -66,6 +85,15 @@ async function run() {
       res.send(result);
     });
 
+    // READ: get a specific class, which for payment
+    app.get("/booking-class-payment/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userSelectedCollection.findOne(query);
+      res.send(result);
+    });
+
+    // DELETE: remove a class from booking list
     app.delete("/booking-class/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -73,7 +101,35 @@ async function run() {
       res.send(result);
     });
 
-    // Student Operation End
+    // READ: get all successfully enrolled classes
+    app.get("/enrolled-class", async (req, res) => {
+      const email = req.query.email;
+      const query = { studentEmail: email };
+      const result = await paymentCollection
+        .find(query)
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    // TODO:::
+    // Reduced class available seats
+    app.patch("/reduce-class-seat/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await addClassCollection.findOneAndUpdate(
+        { query, availableSeats: { $gt: 0 } },
+        { $inc: { availableSeats: -1, enrolledStudents: 1 } },
+        { returnOriginal: false } // To get the updated document as a result
+      );
+
+      console.log(id, result);
+      res.send(result);
+    });
+
+    /*------------------------------------
+          Instructor Operation Start
+    ------------------------------------*/
 
     // CREATE: add a class by instructor
     app.post("/add-classes", async (req, res) => {
@@ -89,6 +145,29 @@ async function run() {
       const result = await addClassCollection.find(query).toArray();
       res.send(result);
     });
+
+    // UPDATE: modify a instructor class
+    app.patch("/update-class/:id", async (req, res) => {
+      const id = req.params.id;
+      const newClassInfo = req.body;
+      const { image, name, price, availableSeats } = newClassInfo;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          image: image,
+          name: name,
+          price: price,
+          availableSeats: availableSeats,
+        },
+      };
+      const result = await addClassCollection.updateOne(query, updateDoc);
+      // console.log(result);
+      res.send(result);
+    });
+
+    /*------------------------------------
+          Admin Operation Start
+    ------------------------------------*/
 
     // READ: get all classes created by all istructors
     app.get("/all-added-classes", async (req, res) => {
@@ -124,34 +203,6 @@ async function run() {
         // console.log("modify ", modify, id, result);
         res.send(result);
       }
-    });
-
-    // UPDATE: modify a instructor class
-    app.patch("/update-class/:id", async (req, res) => {
-      const id = req.params.id;
-      const newClassInfo = req.body;
-      const { image, name, price, availableSeats } = newClassInfo;
-      const query = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          image: image,
-          name: name,
-          price: price,
-          availableSeats: availableSeats,
-        },
-      };
-      const result = await addClassCollection.updateOne(query, updateDoc);
-      // console.log(result);
-      res.send(result);
-    });
-
-    // READ: get all popular classes display on homepage
-    app.get("/popular-teachers", async (req, res) => {
-      const result = await allTeachersCollection
-        .find()
-        .sort({ enrolledStudents: -1 })
-        .toArray();
-      res.send(result);
     });
 
     // CREATE: post a user in db
@@ -193,6 +244,38 @@ async function run() {
       const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
     });
+
+    /*------------------------------------
+              Payment Operations
+    ------------------------------------*/
+
+    // PAYMENT METHODE
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // SAVE PAYMENT INFO IN DB
+    app.post("/save-payment-info", async (req, res) => {
+      const payment = req.body;
+      // console.log(payment);
+      const result = await paymentCollection.insertOne(payment);
+      res.send(result);
+    });
+
+    /*-------------------------------------------------
+                End point of all operations
+    -------------------------------------------------*/
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
