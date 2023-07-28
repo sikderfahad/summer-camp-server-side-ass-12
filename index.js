@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
 const stripe = require("stripe")(process.env.PAYMENT_SECRATE_KEY);
+const jwt = require("jsonwebtoken");
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
@@ -9,6 +10,35 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+/*------------------------------------
+              Verify JWT
+------------------------------------*/
+
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+
+  // beared token
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.JWT_ACCESS_TOKEN, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
+/*------------------------------------
+            Verify JWT End
+------------------------------------*/
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3zuhxgd.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -33,6 +63,18 @@ async function run() {
     const addClassCollection = database.collection("add-classes");
     const userSelectedCollection = database.collection("booking-classes");
     const paymentCollection = database.collection("payments");
+
+    /*------------------------------------
+                JWT Operation
+    ------------------------------------*/
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_ACCESS_TOKEN, {
+        expiresIn: "1d",
+      });
+      res.send({ token });
+    });
 
     /*------------------------------------
                 Only view page
@@ -78,8 +120,17 @@ async function run() {
     });
 
     // READ: get all booking class when a student select this
-    app.get("/booking-class", async (req, res) => {
+    app.get("/booking-class", verifyJWT, async (req, res) => {
       const email = req.query.email;
+
+      // check authenticate email
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res
+          .status(403)
+          .send({ error: true, message: "Forbidden access" });
+      }
+
       const query = { studentEmail: email };
       const result = await userSelectedCollection.find(query).toArray();
       res.send(result);
@@ -104,6 +155,7 @@ async function run() {
     // READ: get all successfully enrolled classes
     app.get("/enrolled-class", async (req, res) => {
       const email = req.query.email;
+
       const query = { studentEmail: email };
       const result = await paymentCollection
         .find(query)
@@ -118,12 +170,12 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await addClassCollection.findOneAndUpdate(
-        { query, availableSeats: { $gt: 0 } },
+        { ...query, availableSeats: { $gt: 0 } },
         { $inc: { availableSeats: -1, enrolledStudents: 1 } },
         { returnOriginal: false } // To get the updated document as a result
       );
 
-      console.log(id, result);
+      // console.log(id, result);
       res.send(result);
     });
 
